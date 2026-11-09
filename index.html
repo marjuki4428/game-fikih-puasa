@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tebak Gambar Fikih Puasa</title>
+<style>
+  :root{
+    --bg:#0f3d3e; --card:#fffdf7; --ink:#1d2b2b; --accent:#e0a800; --ok:#2e8b57; --bad:#c0392b; --tile:#f1e6c8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);
+    min-height:100vh;display:flex;justify-content:center;padding:16px}
+  .wrap{width:100%;max-width:560px}
+  h1{color:#fff;text-align:center;font-size:1.3rem;margin:4px 0 2px}
+  .sub{color:#cfe3df;text-align:center;font-size:.85rem;margin-bottom:12px}
+  .card{background:var(--card);border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .bar{display:flex;justify-content:space-between;font-weight:600;font-size:.9rem;margin-bottom:10px}
+  .progress{height:8px;background:#e8dfc6;border-radius:99px;overflow:hidden;margin-bottom:14px}
+  .progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+  .pic{font-size:4rem;text-align:center;background:#fff;border:2px dashed #d9c98f;border-radius:14px;padding:16px 8px;letter-spacing:.15em;line-height:1.2}
+  .hint{text-align:center;margin:12px 0;font-size:.95rem;color:#3d4f4f}
+  .answer{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin:14px 0}
+  .word{display:flex;gap:5px}
+  .slot{width:36px;height:44px;border:2px solid #b9a867;border-radius:8px;background:#fff;font-size:1.3rem;font-weight:700;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none}
+  .slot.fixed{background:#fff3c4;cursor:default}
+  .answer.ok .slot{background:#d9f2e3;border-color:var(--ok)}
+  .answer.bad .slot{background:#fbdcd8;border-color:var(--bad)}
+  .answer.bad{animation:shake .35s}
+  @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .pool{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin:12px 0}
+  .tile{width:40px;height:44px;border:0;border-radius:9px;background:var(--tile);font-size:1.2rem;font-weight:700;cursor:pointer;
+    box-shadow:0 2px 0 #c9b985;color:var(--ink)}
+  .tile:active{transform:translateY(1px)}
+  .tile.used{visibility:hidden}
+  .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+  .btn{border:0;border-radius:10px;padding:10px 16px;font-size:.95rem;font-weight:700;cursor:pointer;background:var(--accent);color:#2b2200}
+  .btn.sec{background:#e8dfc6;color:var(--ink)}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .msg{min-height:1.4em;text-align:center;font-weight:700;margin-top:8px}
+  .msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+  .info{display:none;background:#eef8f1;border-left:4px solid var(--ok);padding:10px 12px;border-radius:8px;margin-top:12px;font-size:.92rem;line-height:1.45}
+  .end{text-align:center}
+  .end .big{font-size:3rem;margin:6px 0}
+  .end .score{font-size:2rem;font-weight:800;color:var(--ok)}
+  @media(max-width:420px){.slot{width:30px;height:40px;font-size:1.1rem}.tile{width:36px;height:42px}.pic{font-size:3rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌙 Tebak Gambar Fikih Puasa</h1>
+  <div class="sub">Kelas X SMA • Tebak istilah dari gambar, susun hurufnya!</div>
+  <div class="card" id="game"></div>
+</div>
+
+<script>
+/* ============================================================
+   DAFTAR SOAL — Guru bisa mengubah/menambah soal di sini.
+   e = emoji petunjuk gambar, a = jawaban (huruf besar),
+   h = petunjuk tertulis, i = penjelasan singkat setelah benar.
+   ============================================================ */
+const SOAL = [
+  {e:"🍚🌙⏰", a:"SAHUR", h:"Makan dan minum di akhir malam sebelum fajar.", i:"Sahur hukumnya sunnah dan mengandung berkah. Disunnahkan mengakhirkan sahur mendekati waktu subuh."},
+  {e:"🌅🥤🌴", a:"BERBUKA", h:"Dilakukan ketika waktu Magrib tiba.", i:"Berbuka disegerakan begitu masuk waktu Magrib, dan dianjurkan dimulai dengan kurma atau air."},
+  {e:"🚫🍽️🌌", a:"IMSAK", h:"Waktu mulai menahan diri, sedikit sebelum Subuh.", i:"Imsak berarti menahan diri. Jadwal imsak adalah tanda kehati-hatian; batas sah sahur adalah masuknya waktu Subuh."},
+  {e:"💭❤️🌙", a:"NIAT", h:"Tekad dalam hati untuk berpuasa. Wajib dilakukan sebelum fajar.", i:"Niat adalah rukun puasa. Untuk puasa wajib, niat dilakukan pada malam hari sebelum terbit fajar."},
+  {e:"🧳🚗🛣️", a:"MUSAFIR", h:"Orang yang sedang dalam perjalanan jauh.", i:"Musafir diperbolehkan tidak berpuasa dan wajib menggantinya di hari lain (qadha)."},
+  {e:"🔁📅🌙", a:"QADHA", h:"Mengganti puasa Ramadan yang ditinggalkan di hari lain.", i:"Qadha dilakukan sejumlah hari yang ditinggalkan karena uzur, seperti sakit atau safar."},
+  {e:"🍚🤲👴", a:"FIDYAH", h:"Memberi makan orang miskin sebagai ganti puasa bagi yang tidak mampu berpuasa.", i:"Fidyah berlaku, misalnya, bagi lansia atau orang sakit menahun yang tidak mampu berpuasa."},
+  {e:"🌙🔭👀", a:"HILAL", h:"Bulan sabit tipis yang diamati untuk menentukan awal bulan.", i:"Penentuan awal Ramadan dan Syawal berkaitan dengan hilal, melalui rukyat (pengamatan) dan hisab (perhitungan)."},
+  {e:"🌴🍬🥛", a:"KURMA", h:"Makanan yang disunnahkan untuk berbuka.", i:"Rasulullah SAW berbuka dengan ruthab (kurma segar), jika tidak ada maka tamr (kurma kering), jika tidak ada maka air."},
+  {e:"🕌🛐🌙", a:"TARAWIH", h:"Salat sunnah malam yang dikerjakan khusus di bulan Ramadan.", i:"Tarawih sunnah mu'akkadah, dikerjakan setelah salat Isya, biasanya 8 atau 20 rakaat ditambah witir."},
+  {e:"🕌🧎‍♂️🌃", a:"ITIKAF", h:"Berdiam diri di masjid untuk beribadah, terutama 10 hari terakhir Ramadan.", i:"Itikaf adalah berdiam di masjid dengan niat beribadah kepada Allah, untuk mencari Lailatul Qadar."},
+  {e:"✨🌌🕌", a:"LAILATUL QADAR", h:"Malam yang lebih baik daripada seribu bulan.", i:"Lailatul Qadar dicari pada 10 malam terakhir Ramadan, khususnya malam-malam ganjil (QS. Al-Qadr)."},
+  {e:"🌾🤲🎁", a:"ZAKAT FITRAH", h:"Zakat wajib yang ditunaikan sebelum salat Idulfitri.", i:"Zakat fitrah berfungsi menyucikan orang yang berpuasa dan membantu fakir miskin. Besarnya satu sha' (sekitar 2,5 kg) makanan pokok."},
+  {e:"6️⃣📅🌙", a:"SYAWAL", h:"Puasa sunnah 6 hari dilakukan pada bulan ini setelah Ramadan.", i:"Puasa enam hari di bulan Syawal setelah Ramadan pahalanya seperti puasa setahun penuh (HR. Muslim)."},
+  {e:"🎉🌙🕌", a:"IDUL FITRI", h:"Hari raya setelah sebulan penuh berpuasa.", i:"Pada 1 Syawal umat Islam diharamkan berpuasa, dan disunnahkan salat Id, takbiran, serta saling memaafkan."},
+  {e:"🤮🚫🌙", a:"MUNTAH", h:"Jika disengaja, hal ini membatalkan puasa.", i:"Muntah yang disengaja membatalkan puasa. Jika muntah tanpa sengaja, puasa tetap sah."}
+];
+
+const game = document.getElementById("game");
+let idx = 0, score = 0, slots = [], pool = [], locked = false, hints = 0, wrongs = 0, target = "";
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function start(){
+  idx = 0; score = 0;
+  shuffle(SOAL);
+  loadQuestion();
+}
+
+function loadQuestion(){
+  const q = SOAL[idx];
+  target = q.a.replace(/ /g,"");
+  hints = 0; wrongs = 0; locked = false;
+  slots = new Array(target.length).fill(null);
+  const letters = target.split("");
+  const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const extra = Math.min(4, Math.max(0, 18 - letters.length));
+  for(let i=0;i<extra;i++) letters.push(abc[Math.floor(Math.random()*26)]);
+  pool = shuffle(letters).map(ch=>({ch, used:false}));
+  render();
+}
+
+function render(){
+  const q = SOAL[idx];
+  let n = 0, wordsHtml = "";
+  q.a.split(" ").forEach(w=>{
+    let s = "";
+    for(let k=0;k<w.length;k++){
+      const sl = slots[n];
+      s += `<div class="slot${sl&&sl.fixed?" fixed":""}" data-i="${n}">${sl?sl.ch:""}</div>`;
+      n++;
+    }
+    wordsHtml += `<div class="word">${s}</div>`;
+  });
+  const tiles = pool.map((t,i)=>`<button class="tile${t.used?" used":""}" data-p="${i}">${t.ch}</button>`).join("");
+  game.innerHTML = `
+    <div class="bar"><span>Soal ${idx+1} / ${SOAL.length}</span><span>⭐ Skor: ${score}</span></div>
+    <div class="progress"><i style="width:${(idx/SOAL.length)*100}%"></i></div>
+    <div class="pic">${q.e}</div>
+    <div class="hint">💡 ${q.h}</div>
+    <div class="answer" id="answer">${wordsHtml}</div>
+    <div class="msg" id="msg"></div>
+    <div class="pool" id="pool">${tiles}</div>
+    <div class="row">
+      <button class="btn sec" id="clear">Hapus</button>
+      <button class="btn sec" id="hintBtn">🔎 Bantuan huruf (−3)</button>
+      <button class="btn" id="next" style="display:none">${idx+1===SOAL.length?"Lihat hasil":"Soal berikutnya ➜"}</button>
+    </div>
+    <div class="info" id="info"><b>Penjelasan:</b> ${q.i}</div>`;
+  document.getElementById("pool").onclick = e=>{
+    const b = e.target.closest(".tile"); if(b) place(+b.dataset.p);
+  };
+  document.getElementById("answer").onclick = e=>{
+    const s = e.target.closest(".slot"); if(s) removeSlot(+s.dataset.i);
+  };
+  document.getElementById("clear").onclick = clearAll;
+  document.getElementById("hintBtn").onclick = giveHint;
+  document.getElementById("next").onclick = ()=>{ idx++; idx>=SOAL.length ? finish() : loadQuestion(); };
+}
+
+function place(p){
+  if(locked || pool[p].used) return;
+  const i = slots.findIndex(s=>s===null);
+  if(i<0) return;
+  slots[i] = {ch:pool[p].ch, pi:p, fixed:false};
+  pool[p].used = true;
+  render();
+  if(slots.every(s=>s!==null)) check();
+}
+
+function removeSlot(i){
+  if(locked) return;
+  const s = slots[i];
+  if(!s || s.fixed) return;
+  pool[s.pi].used = false;
+  slots[i] = null;
+  render();
+}
+
+function clearAll(){
+  if(locked) return;
+  slots.forEach((s,i)=>{ if(s && !s.fixed){ pool[s.pi].used=false; slots[i]=null; } });
+  render();
+}
+
+function giveHint(){
+  if(locked) return;
+  for(let i=0;i<target.length;i++){
+    const s = slots[i];
+    if(s && s.fixed) continue;
+    if(s && s.ch===target[i]){ s.fixed = true; hints++; render(); return; }
+    if(s){ pool[s.pi].used=false; slots[i]=null; }
+    let p = pool.findIndex(t=>t.ch===target[i] && !t.used);
+    if(p<0){
+      const k = slots.findIndex((x,j)=>j!==i && x && !x.fixed && x.ch===target[i]);
+      if(k>=0){ pool[slots[k].pi].used=false; slots[k]=null; p = pool.findIndex(t=>t.ch===target[i] && !t.used); }
+    }
+    if(p<0) return;
+    slots[i] = {ch:target[i], pi:p, fixed:true};
+    pool[p].used = true;
+    hints++;
+    render();
+    if(slots.every(x=>x!==null)) check();
+    return;
+  }
+}
+
+function check(){
+  const guess = slots.map(s=>s.ch).join("");
+  const ans = document.getElementById("answer");
+  const msg = document.getElementById("msg");
+  if(guess === target){
+    locked = true;
+    const pts = Math.max(2, 10 - 3*hints - 2*wrongs);
+    score += pts;
+    ans.classList.add("ok");
+    msg.className = "msg ok";
+    msg.textContent = `✅ Benar! +${pts} poin`;
+    document.getElementById("info").style.display = "block";
+    document.getElementById("next").style.display = "inline-block";
+    document.getElementById("hintBtn").disabled = true;
+    document.getElementById("clear").disabled = true;
+    document.querySelector(".bar span:last-child").textContent = `⭐ Skor: ${score}`;
+  }else{
+    wrongs++;
+    ans.classList.add("bad");
+    msg.className = "msg bad";
+    msg.textContent = "❌ Belum tepat, coba lagi!";
+    setTimeout(()=>{ ans.classList.remove("bad"); }, 400);
+  }
+}
+
+function finish(){
+  const max = SOAL.length*10;
+  const pct = score/max;
+  let title = "Semangat belajar lagi! 📖", icon = "🌱";
+  if(pct>=0.9){ title = "Masya Allah, luar biasa!"; icon = "🏆"; }
+  else if(pct>=0.7){ title = "Bagus sekali!"; icon = "🌟"; }
+  else if(pct>=0.5){ title = "Lumayan, terus tingkatkan!"; icon = "👍"; }
+  game.innerHTML = `
+    <div class="end">
+      <div class="big">${icon}</div>
+      <h2>${title}</h2>
+      <div>Skor akhir kamu</div>
+      <div class="score">${score} / ${max}</div>
+      <p>Kamu sudah menyelesaikan ${SOAL.length} soal fikih puasa.</p>
+      <div class="row"><button class="btn" id="again">Main lagi 🔄</button></div>
+    </div>`;
+  document.getElementById("again").onclick = start;
+}
+
+/* Dukungan papan ketik (untuk laptop) */
+document.addEventListener("keydown", e=>{
+  if(locked || !SOAL[idx] || !document.getElementById("pool")) return;
+  if(e.key==="Backspace"){
+    for(let i=slots.length-1;i>=0;i--){ if(slots[i] && !slots[i].fixed){ removeSlot(i); break; } }
+  }else if(/^[a-zA-Z]$/.test(e.key)){
+    const p = pool.findIndex(t=>t.ch===e.key.toUpperCase() && !t.used);
+    if(p>=0) place(p);
+  }
+});
+
+start();
+</script>
+</body>
+</html>
